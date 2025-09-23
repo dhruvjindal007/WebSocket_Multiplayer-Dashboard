@@ -37,7 +37,6 @@ function App() {
   function sendScore() {
     if (socket && score.name && score.score) {
       socket.emit('score', score);
-      // Clear the form after sending
       setScore({ name: '', score: '' });
     }
   }
@@ -45,12 +44,9 @@ function App() {
   function sendMessage() {
     if (socket) socket.emit('message', 'Hello from client!');
   }
-
   return (
     <>
       <h1>🎮 Multiplayer Dashboard Game</h1>
-      
-      {/* Test Message Section */}
       <div className="card">
         <button onClick={sendMessage}>Send Test Message</button>
         {messages.length > 0 && (
@@ -69,8 +65,6 @@ function App() {
           </div>
         )}
       </div>
-
-      {/* Score Input Section */}
       <div className="input-container">
         <Input 
           name="name" 
@@ -88,8 +82,6 @@ function App() {
         />
         <button onClick={sendScore}>🏆 Submit Score</button>
       </div>
-
-      {/* Leaderboard Table */}
       <div className="table-container">
         <h2>🏆 Live Leaderboard</h2>
         <table>
@@ -130,7 +122,6 @@ function App() {
             )}
           </tbody>
         </table>
-        
         {scores.length > 0 && (
           <div className="player-count">
             👥 Total Players: {scores.filter(p => p.name && p.name.trim() !== '').length}
@@ -140,5 +131,4 @@ function App() {
     </>
   );
 }
-
 export default App;

@@ -3,10 +3,8 @@ const { createServer } = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const path = require('path');
-
 const app = express();
 app.use(cors());
-
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
@@ -14,42 +12,33 @@ const io = new Server(httpServer, {
     methods: ["GET", "POST"]
   }
 });
-
 let playerScores = [];
-
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
-
   // Send current scores immediately on connection
   socket.emit('playerScores', playerScores);
-
-  // Receive score from client
   socket.on('score', (score) => {
-    console.log('Received score:', score);
-    
-    // Validate input
+  console.log('Received score:', score);
     if (!score.name || !score.score || isNaN(Number(score.score))) {
       socket.emit('error', 'Invalid name or score');
       return;
     }
-
     // Check if player already exists by name (not socket ID)
     const existingPlayerIndex = playerScores.findIndex(p => 
       p.name.toLowerCase().trim() === score.name.toLowerCase().trim()
     );
-
     if (existingPlayerIndex !== -1) {
-      // Update existing player's score (replace, don't add)
+      // Update existing player's score
       playerScores[existingPlayerIndex] = {
         ...playerScores[existingPlayerIndex],
         score: Number(score.score),
-        socketId: socket.id, // Update socket ID in case of reconnection
+        socketId: socket.id,
         lastUpdate: new Date().toISOString()
       };
       console.log(`Updated score for ${score.name}: ${score.score}`);
     } else {
       // Add new player
-      playerScores.push({ 
+      playerScores.push({
         name: score.name.trim(),
         score: Number(score.score),
         socketId: socket.id,
@@ -58,17 +47,13 @@ io.on('connection', (socket) => {
       });
       console.log(`New player added: ${score.name} with score ${score.score}`);
     }
-
     // Sort scores by highest first
     playerScores.sort((a, b) => Number(b.score) - Number(a.score));
-
     console.log('Current leaderboard:', playerScores);
-
     // Broadcast updated scores to all clients
     io.emit('playerScores', playerScores);
   });
-
-  // Handle messages
+  // Handle message
   socket.on('message', (message) => {
     const messageData = { 
       id: socket.id, 
@@ -78,21 +63,12 @@ io.on('connection', (socket) => {
     console.log('Broadcasting message:', messageData);
     io.emit('message', messageData);
   });
-
   // Handle disconnect
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
-    
-    // Optional: Remove players when they disconnect
-    // Comment out these lines if you want scores to persist after disconnect
-    // playerScores = playerScores.filter(p => p.socketId !== socket.id);
-    // io.emit('playerScores', playerScores);
-    
-    // Alternative: Just log the disconnect but keep scores
     console.log('Player disconnected, but scores maintained');
   });
-
-  // Optional: Handle player reconnection
+  // Handle player reconnection
   socket.on('reconnect', (playerName) => {
     const existingPlayer = playerScores.find(p => 
       p.name.toLowerCase().trim() === playerName.toLowerCase().trim()
@@ -103,18 +79,16 @@ io.on('connection', (socket) => {
     }
   });
 });
-
-// Optional: Clean up inactive players periodically (every 10 minutes)
+// Clean up inactive players periodically (every 10 minutes)
 setInterval(() => {
   const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
   const activePlayers = playerScores.filter(p => p.lastUpdate > tenMinutesAgo);
-  
   if (activePlayers.length !== playerScores.length) {
     console.log(`Cleaned up ${playerScores.length - activePlayers.length} inactive players`);
     playerScores = activePlayers;
     io.emit('playerScores', playerScores);
   }
-}, 10 * 60 * 1000); // Run every 10 minutes
+}, 10 * 60 * 1000);
 
 // Serve React build in production
 if (process.env.NODE_ENV === 'production') {
